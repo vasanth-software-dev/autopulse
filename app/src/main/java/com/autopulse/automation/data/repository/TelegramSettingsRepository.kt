@@ -2,6 +2,7 @@ package com.autopulse.automation.data.repository
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,15 +22,24 @@ class TelegramSettingsRepository(context: Context) {
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
         )
-    } catch (e: Exception) {
-        // Fallback for emulator/tests where MasterKey might fail
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    } catch (t: Throwable) {
+        Log.w(TAG, "EncryptedSharedPreferences unavailable (${t.message}), using standard storage.", t)
+        context.getSharedPreferences(FALLBACK_PREFS_NAME, Context.MODE_PRIVATE)
     }
 
-    private val _botToken = MutableStateFlow(prefs.getString(KEY_BOT_TOKEN, "").orEmpty())
+    private fun safeGetString(key: String): String {
+        return try {
+            prefs.getString(key, "").orEmpty()
+        } catch (t: Throwable) {
+            Log.e(TAG, "Error reading setting '$key', clearing cached value.", t)
+            ""
+        }
+    }
+
+    private val _botToken = MutableStateFlow(safeGetString(KEY_BOT_TOKEN))
     val botToken: StateFlow<String> = _botToken.asStateFlow()
 
-    private val _chatId = MutableStateFlow(prefs.getString(KEY_CHAT_ID, "").orEmpty())
+    private val _chatId = MutableStateFlow(safeGetString(KEY_CHAT_ID))
     val chatId: StateFlow<String> = _chatId.asStateFlow()
 
     fun getBotToken(): String = _botToken.value
@@ -44,23 +54,33 @@ class TelegramSettingsRepository(context: Context) {
         val cleanToken = token.trim()
         val cleanChatId = chat.trim()
 
-        prefs.edit()
-            .putString(KEY_BOT_TOKEN, cleanToken)
-            .putString(KEY_CHAT_ID, cleanChatId)
-            .apply()
+        try {
+            prefs.edit()
+                .putString(KEY_BOT_TOKEN, cleanToken)
+                .putString(KEY_CHAT_ID, cleanChatId)
+                .apply()
+        } catch (t: Throwable) {
+            Log.e(TAG, "Error saving settings to preferences", t)
+        }
 
         _botToken.value = cleanToken
         _chatId.value = cleanChatId
     }
 
     fun clearSettings() {
-        prefs.edit().clear().apply()
+        try {
+            prefs.edit().clear().apply()
+        } catch (t: Throwable) {
+            Log.e(TAG, "Error clearing settings", t)
+        }
         _botToken.value = ""
         _chatId.value = ""
     }
 
     companion object {
+        private const val TAG = "TelegramSettingsRepo"
         private const val PREFS_NAME = "encrypted_telegram_prefs"
+        private const val FALLBACK_PREFS_NAME = "autopulse_telegram_settings"
         private const val KEY_BOT_TOKEN = "telegram_bot_token"
         private const val KEY_CHAT_ID = "telegram_chat_id"
     }

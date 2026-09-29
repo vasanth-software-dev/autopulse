@@ -62,21 +62,41 @@ class AutoPulseApplication : Application() {
         super.onCreate()
         instance = this
 
-        // Install crash handler to record fatal issues into database logs
-        AutoPulseCrashHandler.install(executionLogRepository)
+        try {
+            AutoPulseCrashHandler.install(this, executionLogRepository)
+        } catch (t: Throwable) {
+            android.util.Log.e("AutoPulseApp", "Could not install crash handler", t)
+        }
 
-        createNotificationChannels()
-        automationEngine.start()
+        try {
+            createNotificationChannels()
+        } catch (t: Throwable) {
+            android.util.Log.e("AutoPulseApp", "Could not create notification channels", t)
+        }
 
-        // Check for active tasks to recover after process restart
-        applicationScope.launch {
-            val running = repeatingTaskRepository.getRunningTasksList()
-            if (running.isNotEmpty()) {
-                executionLogRepository.logInfo("Application launched: Recovering ${running.size} active repeating task(s).")
-                for (task in running) {
-                    AutomationExecutionService.startTask(this@AutoPulseApplication, task.id)
+        try {
+            automationEngine.start()
+        } catch (t: Throwable) {
+            android.util.Log.e("AutoPulseApp", "Could not start automation engine", t)
+        }
+
+        try {
+            // Check for active tasks to recover after process restart
+            applicationScope.launch {
+                try {
+                    val running = repeatingTaskRepository.getRunningTasksList()
+                    if (running.isNotEmpty()) {
+                        executionLogRepository.logInfo("Application launched: Recovering ${running.size} active repeating task(s).")
+                        for (task in running) {
+                            AutomationExecutionService.startTask(this@AutoPulseApplication, task.id)
+                        }
+                    }
+                } catch (t: Throwable) {
+                    android.util.Log.e("AutoPulseApp", "Error recovering running tasks", t)
                 }
             }
+        } catch (t: Throwable) {
+            android.util.Log.e("AutoPulseApp", "Error launching task recovery scope", t)
         }
     }
 
