@@ -76,22 +76,40 @@ jobs:
           echo "Listing generated APK files:"
           find app/build/outputs/apk/ -name "*.apk"
 
+      - name: Prepare Direct APK for Release
+        run: |
+          mkdir -p release-apk
+          APK_FILE=$(find app/build/outputs/apk/ -name "*.apk" | head -n 1)
+          cp "$APK_FILE" release-apk/AutoPulse-v1.0.0.apk
+          ls -la release-apk/
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: AutoPulse-v1.0.0-APK
-          path: app/build/outputs/apk/**/*.apk
+          path: release-apk/AutoPulse-v1.0.0.apk
           retention-days: 30
+
+      - name: Publish GitHub Release with Direct APK
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          name: AutoPulse v1.0.0 (Direct APK Download)
+          body: |
+            ### 📱 AutoPulse Android App v1.0.0
+            Download **AutoPulse-v1.0.0.apk** below directly to your phone.
+            
+            #### 🚀 Installation Instructions:
+            1. Download `AutoPulse-v1.0.0.apk` below.
+            2. Open the file on your phone.
+            3. If prompted by Android or Play Protect:
+               - Tap **"More details"** -> **"Install anyway"** (Standard for sideloaded apps).
+            4. Grant the required Notification Listener permission inside the app.
+          files: release-apk/AutoPulse-v1.0.0.apk
+          draft: false
+          prerelease: false
 
       - name: Run Unit Tests
         run: ./gradlew testDebugUnitTest --stacktrace
         continue-on-error: true
-
-      - name: Create GitHub Release with APK (on tag push)
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: app/build/outputs/apk/**/*.apk
-          draft: false
-          prerelease: false
-          generate_release_notes: true

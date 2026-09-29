@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
@@ -46,6 +47,40 @@ class AutomationExecutionService : Service() {
         super.onCreate()
         Log.i(TAG, "AutomationExecutionService created.")
         acquireWakeLock()
+        promoteToForeground(buildDefaultNotification())
+    }
+
+    private fun promoteToForeground(notification: Notification) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
+    }
+
+    private fun buildDefaultNotification(): Notification {
+        val openAppIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        val openAppPendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            openAppIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        return NotificationCompat.Builder(this, AutoPulseApplication.CHANNEL_FOREGROUND_SERVICE)
+            .setContentTitle("AutoPulse Background Service")
+            .setContentText("Monitoring and executing automation workflows")
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentIntent(openAppPendingIntent)
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -95,9 +130,9 @@ class AutomationExecutionService : Service() {
                 return@launch
             }
 
-            // Immediately promote service to foreground with persistent notification
+            // Promote service to foreground with persistent notification
             val notification = buildForegroundNotification(task)
-            startForeground(NOTIFICATION_ID, notification)
+            promoteToForeground(notification)
 
             // Launch repeating execution job
             val job = launch(Dispatchers.Default) {
