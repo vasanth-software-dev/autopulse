@@ -50,7 +50,7 @@ fun AutoPulseApp() {
         else -> Screen.Dashboard
     }
 
-    val isTopLevel = Screen.bottomNavItems.any { it.route == currentRoute }
+    val isTopLevel = Screen.bottomNavItems.any { it?.route == currentRoute }
 
     Scaffold(
         topBar = {
@@ -104,7 +104,7 @@ fun AutoPulseApp() {
                 containerColor = SurfaceDark,
                 contentColor = TextSecondaryDark
             ) {
-                Screen.bottomNavItems.forEach { screen ->
+                Screen.bottomNavItems.filterNotNull().forEach { screen ->
                     val selected = currentRoute == screen.route
                     NavigationBarItem(
                         selected = selected,

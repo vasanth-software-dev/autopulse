@@ -15,24 +15,25 @@ sealed class Screen(
     val icon: ImageVector? = null,
     val showInBottomNav: Boolean = false
 ) {
-    object Dashboard : Screen("dashboard", "Dashboard", Icons.Default.Dashboard, showInBottomNav = true)
-    object Automations : Screen("automations", "Automations", Icons.Default.ListAlt, showInBottomNav = true)
-    object RunningTasks : Screen("tasks", "Tasks", Icons.Default.PlayCircle, showInBottomNav = true)
-    object Logs : Screen("logs", "Logs", Icons.Default.Terminal, showInBottomNav = true)
+    data object Dashboard : Screen("dashboard", "Dashboard", Icons.Default.Dashboard, showInBottomNav = true)
+    data object Automations : Screen("automations", "Automations", Icons.Default.ListAlt, showInBottomNav = true)
+    data object RunningTasks : Screen("tasks", "Tasks", Icons.Default.PlayCircle, showInBottomNav = true)
+    data object Logs : Screen("logs", "Logs", Icons.Default.Terminal, showInBottomNav = true)
 
     // Secondary / Config screens
-    object Builder : Screen("builder?automationId={automationId}", "Rule Builder") {
+    data object Builder : Screen("builder?automationId={automationId}", "Rule Builder") {
         fun createRoute(automationId: Long = 0L) = "builder?automationId=$automationId"
     }
-    object TelegramSettings : Screen("telegram_settings", "Telegram Bot", Icons.Default.Send)
-    object Permissions : Screen("permissions", "Permissions", Icons.Default.Security)
+    data object TelegramSettings : Screen("telegram_settings", "Telegram Bot", Icons.Default.Send)
+    data object Permissions : Screen("permissions", "Permissions", Icons.Default.Security)
 
     companion object {
-        val bottomNavItems = listOf(
-            Dashboard,
-            Automations,
-            RunningTasks,
-            Logs
-        )
+        val bottomNavItems: List<Screen>
+            get() = listOf(
+                Dashboard,
+                Automations,
+                RunningTasks,
+                Logs
+            )
     }
 }

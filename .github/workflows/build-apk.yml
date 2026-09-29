@@ -80,38 +80,37 @@ jobs:
         run: |
           mkdir -p release-apk
           APK_FILE=$(find app/build/outputs/apk/ -name "*.apk" | head -n 1)
-          cp "$APK_FILE" release-apk/AutoPulse-v1.0.2.apk
+          cp "$APK_FILE" release-apk/AutoPulse-v1.0.3.apk
           ls -la release-apk/
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AutoPulse-v1.0.2-APK
-          path: release-apk/AutoPulse-v1.0.2.apk
+          name: AutoPulse-v1.0.3-APK
+          path: release-apk/AutoPulse-v1.0.3.apk
           retention-days: 30
 
       - name: Publish GitHub Release with Direct APK
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.2
-          name: AutoPulse v1.0.2 (Direct APK Download)
+          tag_name: v1.0.3
+          name: AutoPulse v1.0.3 (Direct APK Download)
           body: |
-            ### 📱 AutoPulse Android App v1.0.2
-            Download **AutoPulse-v1.0.2.apk** below directly to your phone.
+            ### 📱 AutoPulse Android App v1.0.3
+            Download **AutoPulse-v1.0.3.apk** below directly to your phone.
             
-            #### 🛠️ What's New & Fixed in v1.0.2:
-            - **Fixed Startup Auto-Close / Crash**: Handled OEM-specific `SecurityException` on `Settings.Secure` notification checks and battery optimization checks.
-            - **Zero-Dependency Crash Interceptor**: Added dedicated `:crash` diagnostic activity so the app never auto-closes blindly.
-            - **Defensive Network & Database Monitors**: Safe Room converters and null-safe connectivity registration.
+            #### 🛠️ What's New & Fixed in v1.0.3:
+            - **Fixed Screen.getRoute() NullPointerException**: Fixed Kotlin sealed class companion object static initialization order bug where `bottomNavItems` held null references before subclasses loaded.
+            - **Defensive Navigation**: Added null-safe navigation checks across Compose navigation bar.
             
             #### 🚀 Installation Instructions:
-            1. Download `AutoPulse-v1.0.2.apk` below.
+            1. Download `AutoPulse-v1.0.3.apk` below.
             2. Open the file on your phone.
             3. If prompted by Android or Play Protect:
                - Tap **"More details"** -> **"Install anyway"** (Standard for sideloaded developer apps).
             4. Grant the required permissions inside the app.
-          files: release-apk/AutoPulse-v1.0.2.apk
+          files: release-apk/AutoPulse-v1.0.3.apk
           draft: false
           prerelease: false
 
