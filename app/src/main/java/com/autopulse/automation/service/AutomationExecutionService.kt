@@ -25,6 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -35,6 +36,7 @@ class AutomationExecutionService : Service() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val activeTaskJobs = ConcurrentHashMap<String, Job>()
+    private var telegramPollingJob: Job? = null
     private var wakeLock: PowerManager.WakeLock? = null
 
     private val app by lazy { application as AutoPulseApplication }
@@ -139,6 +141,9 @@ class AutomationExecutionService : Service() {
                 runRepeatingTaskLoop(taskId)
             }
             activeTaskJobs[taskId] = job
+
+            // Start Telegram polling to listen for STOP buttons or /stop commands
+            startTelegramPollingIfNeeded()
         }
     }
 
@@ -216,11 +221,14 @@ class AutomationExecutionService : Service() {
 
         val message = TelegramMessageFormatter.formatHtmlMessage(task.customMessageTemplate, eventMock)
 
+        val replyMarkup = """{"inline_keyboard":[[{"text":"🛑 STOP ALERT","callback_data":"stop:${task.id}"}]]}"""
+
         val result = telegramClient.sendMessage(
             botToken = token,
             chatId = chatId,
             text = message,
-            parseMode = "HTML"
+            parseMode = "HTML",
+            replyMarkupJson = replyMarkup
         )
 
         when (result) {
@@ -290,6 +298,7 @@ class AutomationExecutionService : Service() {
             for (task in runningTasks) {
                 startRepeatingTask(task.id)
             }
+            startTelegramPollingIfNeeded()
         }
     }
 
@@ -297,9 +306,114 @@ class AutomationExecutionService : Service() {
         val remainingRunningTasks = taskRepo.getRunningTasksList()
         if (remainingRunningTasks.isEmpty() && activeTaskJobs.isEmpty()) {
             Log.i(TAG, "No remaining active tasks. Terminating Foreground Service.")
+            telegramPollingJob?.cancel()
+            telegramPollingJob = null
             releaseWakeLock()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
+        }
+    }
+
+    private fun startTelegramPollingIfNeeded() {
+        if (telegramPollingJob?.isActive == true) return
+
+        val token = telegramRepo.getBotToken()
+        val chatId = telegramRepo.getChatId()
+        if (token.isBlank() || chatId.isBlank()) return
+
+        telegramPollingJob = serviceScope.launch(Dispatchers.IO) {
+            Log.i(TAG, "Starting Telegram polling for STOP commands and buttons...")
+            var lastOffset = 0L
+
+            // Fast-forward offset to ignore old stale commands
+            try {
+                val initial = telegramClient.getUpdates(token, offset = -1, timeoutSeconds = 0)
+                if (initial is TelegramResult.Success && initial.data.isNotEmpty()) {
+                    lastOffset = initial.data.last().updateId
+                }
+            } catch (t: Throwable) {
+                Log.w(TAG, "Could not fast-forward Telegram offset", t)
+            }
+
+            while (isActive) {
+                try {
+                    val runningTasks = taskRepo.getRunningTasksList()
+                    if (runningTasks.isEmpty() && activeTaskJobs.isEmpty()) {
+                        Log.i(TAG, "No tasks active. Stopping Telegram listener loop.")
+                        break
+                    }
+
+                    val updatesResult = telegramClient.getUpdates(token, offset = lastOffset + 1, timeoutSeconds = 10)
+                    if (updatesResult is TelegramResult.Success) {
+                        for (update in updatesResult.data) {
+                            lastOffset = maxOf(lastOffset, update.updateId)
+
+                            // 1. Handle Inline Button Clicks (callback_query)
+                            val callbackData = update.callbackData
+                            val callbackId = update.callbackQueryId
+                            if (!callbackData.isNullOrBlank()) {
+                                if (!callbackId.isNullOrBlank()) {
+                                    telegramClient.answerCallbackQuery(token, callbackId, "Alert Stopped! 🛑")
+                                }
+
+                                if (callbackData.startsWith("stop:")) {
+                                    val targetTaskId = callbackData.removePrefix("stop:")
+                                    stopRepeatingTask(targetTaskId, "User tapped '🛑 STOP ALERT' in Telegram")
+                                    telegramClient.sendMessage(
+                                        botToken = token,
+                                        chatId = chatId,
+                                        text = "🛑 <b>Alert Stopped!</b> Repeating cycle cancelled via Telegram button."
+                                    )
+                                } else if (callbackData == "stop_all") {
+                                    stopAllTasks("User tapped 'STOP ALL' in Telegram")
+                                    telegramClient.sendMessage(
+                                        botToken = token,
+                                        chatId = chatId,
+                                        text = "🛑 <b>All Alerts Stopped!</b> All repeating cycles cancelled via Telegram."
+                                    )
+                                }
+                            }
+
+                            // 2. Handle Text Commands (/stop, /stopall, /status)
+                            val messageText = update.messageText?.trim()?.lowercase()
+                            if (!messageText.isNullOrBlank()) {
+                                when (messageText) {
+                                    "/stop", "/stopall" -> {
+                                        val count = taskRepo.getRunningTasksList().size
+                                        stopAllTasks("User sent '$messageText' in Telegram chat")
+                                        telegramClient.sendMessage(
+                                            botToken = token,
+                                            chatId = chatId,
+                                            text = "🛑 <b>All Alerts Stopped!</b> $count active repeating task(s) cancelled."
+                                        )
+                                    }
+                                    "/status" -> {
+                                        val active = taskRepo.getRunningTasksList()
+                                        val statusText = if (active.isEmpty()) {
+                                            "🟢 <b>AutoPulse Status:</b> Idle. No repeating alerts currently active."
+                                        } else {
+                                            "⚡ <b>AutoPulse Status:</b> ${active.size} active repeating alert(s):\n" +
+                                                active.joinToString("\n") { "• <b>${it.automationName}</b> (every ${it.intervalSeconds}s, sent: ${it.executionCount})" }
+                                        }
+                                        telegramClient.sendMessage(
+                                            botToken = token,
+                                            chatId = chatId,
+                                            text = statusText
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        delay(2000L)
+                    }
+                } catch (e: CancellationException) {
+                    break
+                } catch (t: Throwable) {
+                    Log.w(TAG, "Error in Telegram polling loop", t)
+                    delay(3000L)
+                }
+            }
         }
     }
 
@@ -396,6 +510,8 @@ class AutomationExecutionService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         releaseWakeLock()
+        telegramPollingJob?.cancel()
+        telegramPollingJob = null
         activeTaskJobs.values.forEach { it.cancel() }
         activeTaskJobs.clear()
         Log.i(TAG, "AutomationExecutionService destroyed.")

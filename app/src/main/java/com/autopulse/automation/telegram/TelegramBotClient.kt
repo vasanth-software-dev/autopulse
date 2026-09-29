@@ -28,6 +28,7 @@ class TelegramBotClient(
         chatId: String,
         text: String,
         parseMode: String = "HTML",
+        replyMarkupJson: String? = null,
         maxRetries: Int = 2
     ): TelegramResult<TelegramMessageResult> {
         val cleanToken = botToken.trim()
@@ -50,16 +51,19 @@ class TelegramBotClient(
 
         val url = "https://api.telegram.org/bot$cleanToken/sendMessage"
 
-        val formBody = FormBody.Builder()
+        val formBuilder = FormBody.Builder()
             .add("chat_id", cleanChatId)
             .add("text", text)
             .add("parse_mode", parseMode)
             .add("disable_web_page_preview", "true")
-            .build()
+
+        if (!replyMarkupJson.isNullOrBlank()) {
+            formBuilder.add("reply_markup", replyMarkupJson)
+        }
 
         val request = Request.Builder()
             .url(url)
-            .post(formBody)
+            .post(formBuilder.build())
             .build()
 
         var attempt = 0
@@ -130,6 +134,108 @@ class TelegramBotClient(
             } catch (e: Exception) {
                 TelegramResult.Failure(
                     description = "Connection failed: ${e.localizedMessage ?: "Network error"}",
+                    isRetryable = true
+                )
+            }
+        }
+    }
+
+    /**
+     * Answers a Telegram callback query when an inline button is clicked.
+     */
+    suspend fun answerCallbackQuery(
+        botToken: String,
+        callbackQueryId: String,
+        text: String? = null
+    ): Boolean {
+        val cleanToken = botToken.trim()
+        if (cleanToken.isBlank() || callbackQueryId.isBlank()) return false
+
+        val url = "https://api.telegram.org/bot$cleanToken/answerCallbackQuery"
+        val formBuilder = FormBody.Builder()
+            .add("callback_query_id", callbackQueryId)
+
+        if (!text.isNullOrBlank()) {
+            formBuilder.add("text", text)
+        }
+
+        val request = Request.Builder().url(url).post(formBuilder.build()).build()
+
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = client.newCall(request).execute()
+                response.isSuccessful
+            } catch (e: Exception) {
+                Log.w(TAG, "Error answering callback query: ${e.message}")
+                false
+            }
+        }
+    }
+
+    /**
+     * Long-polls for Telegram updates to receive callback queries (button clicks) and text commands.
+     */
+    suspend fun getUpdates(
+        botToken: String,
+        offset: Long = 0,
+        timeoutSeconds: Int = 10
+    ): TelegramResult<List<TelegramUpdate>> {
+        val cleanToken = botToken.trim()
+        if (cleanToken.isBlank()) {
+            return TelegramResult.Failure(description = "Token is empty", errorCode = 401)
+        }
+
+        val url = "https://api.telegram.org/bot$cleanToken/getUpdates"
+        val formBuilder = FormBody.Builder()
+            .add("offset", offset.toString())
+            .add("timeout", timeoutSeconds.toString())
+            .add("allowed_updates", "[\"message\",\"callback_query\"]")
+
+        val request = Request.Builder().url(url).post(formBuilder.build()).build()
+
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = client.newCall(request).execute()
+                val body = response.body?.string().orEmpty()
+
+                if (response.isSuccessful) {
+                    val json = JSONObject(body)
+                    val resultArray = json.optJSONArray("result")
+                    val updates = mutableListOf<TelegramUpdate>()
+
+                    if (resultArray != null) {
+                        for (i in 0 until resultArray.length()) {
+                            val item = resultArray.getJSONObject(i)
+                            val updateId = item.getLong("update_id")
+
+                            val messageObj = item.optJSONObject("message")
+                            val callbackObj = item.optJSONObject("callback_query")
+
+                            val messageText = messageObj?.optString("text")
+                            val callbackId = callbackObj?.optString("id")
+                            val callbackData = callbackObj?.optString("data")
+
+                            val chatId = messageObj?.optJSONObject("chat")?.optLong("id")?.toString()
+                                ?: callbackObj?.optJSONObject("message")?.optJSONObject("chat")?.optLong("id")?.toString()
+
+                            updates.add(
+                                TelegramUpdate(
+                                    updateId = updateId,
+                                    messageText = messageText,
+                                    callbackQueryId = callbackId,
+                                    callbackData = callbackData,
+                                    chatId = chatId
+                                )
+                            )
+                        }
+                    }
+                    TelegramResult.Success(updates)
+                } else {
+                    parseTelegramError(response.code, body)
+                }
+            } catch (e: Exception) {
+                TelegramResult.Failure(
+                    description = "Polling failed: ${e.localizedMessage ?: "Network error"}",
                     isRetryable = true
                 )
             }

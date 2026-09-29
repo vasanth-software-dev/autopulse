@@ -147,8 +147,19 @@ class ActionExecutor(
 
         val htmlFormatted = TelegramMessageFormatter.formatHtmlMessage(customTemplate, event)
 
-        // 4. Send with retry
-        return when (val result = telegramBotClient.sendMessage(token, chatId, htmlFormatted, parseMode = "HTML")) {
+        // 4. Attach inline STOP ALERT button if linked to an active repeating task
+        val replyMarkup = if (!taskId.isNullOrBlank()) {
+            """{"inline_keyboard":[[{"text":"🛑 STOP ALERT","callback_data":"stop:$taskId"}]]}"""
+        } else null
+
+        // 5. Send with retry
+        return when (val result = telegramBotClient.sendMessage(
+            botToken = token,
+            chatId = chatId,
+            text = htmlFormatted,
+            parseMode = "HTML",
+            replyMarkupJson = replyMarkup
+        )) {
             is TelegramResult.Success -> {
                 logRepository.logSuccess(
                     message = "Telegram message sent for '${automation.name}'. (ID: ${result.data.messageId})",

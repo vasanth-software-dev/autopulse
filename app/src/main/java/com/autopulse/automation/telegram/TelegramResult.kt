@@ -23,3 +23,12 @@ data class TelegramBotInfo(
     val firstName: String,
     val canJoinGroups: Boolean = false
 )
+
+data class TelegramUpdate(
+    val updateId: Long,
+    val messageText: String? = null,
+    val callbackQueryId: String? = null,
+    val callbackData: String? = null,
+    val chatId: String? = null
+)
+
