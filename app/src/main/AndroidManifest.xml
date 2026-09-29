@@ -43,6 +43,13 @@
             </intent-filter>
         </activity>
 
+        <!-- Isolated Diagnostic Crash Reporter Activity -->
+        <activity
+            android:name=".error.CrashActivity"
+            android:exported="false"
+            android:process=":crash"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar" />
+
         <!-- Notification Listener Service -->
         <service
             android:name=".service.AutoPulseNotificationListenerService"

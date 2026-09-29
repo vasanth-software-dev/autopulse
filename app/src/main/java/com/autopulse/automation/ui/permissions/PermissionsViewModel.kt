@@ -77,43 +77,72 @@ class PermissionsViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     private fun checkPermissions(): PermissionState {
-        val context = getApplication<Application>()
+        return try {
+            val context = getApplication<Application>()
 
-        // 1. Notification Listener Permission
-        val flat = Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
-        val listenerGranted = flat != null && flat.contains(context.packageName)
+            // 1. Notification Listener Permission (defensive against SecurityException)
+            val listenerGranted = try {
+                val enabledListeners = NotificationManagerCompat.getEnabledListenerPackages(context)
+                if (enabledListeners.contains(context.packageName)) {
+                    true
+                } else {
+                    val flat = Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
+                    flat != null && flat.contains(context.packageName)
+                }
+            } catch (_: Throwable) {
+                false
+            }
 
-        // 2. Post Notifications (Android 13+)
-        val postNotificationsGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            NotificationManagerCompat.from(context).areNotificationsEnabled()
-        } else {
-            true
+            // 2. Post Notifications (Android 13+)
+            val postNotificationsGranted = try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    NotificationManagerCompat.from(context).areNotificationsEnabled()
+                } else {
+                    true
+                }
+            } catch (_: Throwable) {
+                true
+            }
+
+            // 3. Battery Optimizations
+            val batteryIgnored = try {
+                val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+                powerManager?.isIgnoringBatteryOptimizations(context.packageName) == true
+            } catch (_: Throwable) {
+                false
+            }
+
+            // 4. Exact Alarms (Android 12+)
+            val exactAlarmAllowed = try {
+                val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    alarmManager?.canScheduleExactAlarms() == true
+                } else {
+                    true
+                }
+            } catch (_: Throwable) {
+                false
+            }
+
+            PermissionState(
+                isNotificationListenerGranted = listenerGranted,
+                isPostNotificationsGranted = postNotificationsGranted,
+                isBatteryOptimizationIgnored = batteryIgnored,
+                isExactAlarmAllowed = exactAlarmAllowed
+            )
+        } catch (_: Throwable) {
+            PermissionState()
         }
-
-        // 3. Battery Optimizations
-        val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
-        val batteryIgnored = powerManager?.isIgnoringBatteryOptimizations(context.packageName) == true
-
-        // 4. Exact Alarms (Android 12+)
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
-        val exactAlarmAllowed = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            alarmManager?.canScheduleExactAlarms() == true
-        } else {
-            true
-        }
-
-        return PermissionState(
-            isNotificationListenerGranted = listenerGranted,
-            isPostNotificationsGranted = postNotificationsGranted,
-            isBatteryOptimizationIgnored = batteryIgnored,
-            isExactAlarmAllowed = exactAlarmAllowed
-        )
     }
 
     fun openNotificationListenerSettings(context: Context) {
-        val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(intent)
+        try {
+            val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+        } catch (t: Throwable) {
+            android.util.Log.e("PermissionsVM", "Cannot open notification listener settings", t)
+        }
     }
 
     fun openBatteryOptimizationSettings(context: Context) {
@@ -123,35 +152,47 @@ class PermissionsViewModel(application: Application) : AndroidViewModel(applicat
         }
         try {
             context.startActivity(intent)
-        } catch (_: Exception) {
-            val fallbackIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        } catch (_: Throwable) {
+            try {
+                val fallbackIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(fallbackIntent)
+            } catch (t: Throwable) {
+                android.util.Log.e("PermissionsVM", "Cannot open battery settings", t)
             }
-            context.startActivity(fallbackIntent)
         }
     }
 
     fun openAppNotificationSettings(context: Context) {
-        val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+        try {
+            val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                    putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                }
+            } else {
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.parse("package:${context.packageName}")
+                }
             }
-        } else {
-            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                data = Uri.parse("package:${context.packageName}")
-            }
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+        } catch (t: Throwable) {
+            android.util.Log.e("PermissionsVM", "Cannot open app notification settings", t)
         }
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(intent)
     }
 
     fun openExactAlarmSettings(context: Context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                data = Uri.parse("package:${context.packageName}")
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                    data = Uri.parse("package:${context.packageName}")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(intent)
             }
-            context.startActivity(intent)
+        } catch (t: Throwable) {
+            android.util.Log.e("PermissionsVM", "Cannot open exact alarm settings", t)
         }
     }
 }

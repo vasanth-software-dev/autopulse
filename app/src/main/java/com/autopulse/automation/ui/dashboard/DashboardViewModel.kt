@@ -71,19 +71,40 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     private fun checkSystemStatus(): Triple<Boolean, Boolean, Boolean> {
-        val context = getApplication<Application>()
+        return try {
+            val context = getApplication<Application>()
 
-        // 1. Check Notification Listener Permission
-        val flat = Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
-        val listenerEnabled = flat != null && flat.contains(context.packageName)
+            // 1. Check Notification Listener Permission (defensive against SecurityException)
+            val listenerEnabled = try {
+                val enabledListeners = androidx.core.app.NotificationManagerCompat.getEnabledListenerPackages(context)
+                if (enabledListeners.contains(context.packageName)) {
+                    true
+                } else {
+                    val flat = Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
+                    flat != null && flat.contains(context.packageName)
+                }
+            } catch (_: Throwable) {
+                false
+            }
 
-        // 2. Check Telegram Bot Credentials
-        val telegramReady = telegramRepo.isConfigured()
+            // 2. Check Telegram Bot Credentials
+            val telegramReady = try {
+                telegramRepo.isConfigured()
+            } catch (_: Throwable) {
+                false
+            }
 
-        // 3. Check Battery Optimization Exemption
-        val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
-        val batteryIgnored = powerManager?.isIgnoringBatteryOptimizations(context.packageName) == true
+            // 3. Check Battery Optimization Exemption
+            val batteryIgnored = try {
+                val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+                powerManager?.isIgnoringBatteryOptimizations(context.packageName) == true
+            } catch (_: Throwable) {
+                false
+            }
 
-        return Triple(listenerEnabled, telegramReady, batteryIgnored)
+            Triple(listenerEnabled, telegramReady, batteryIgnored)
+        } catch (_: Throwable) {
+            Triple(false, false, false)
+        }
     }
 }

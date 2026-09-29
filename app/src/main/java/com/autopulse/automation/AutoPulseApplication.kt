@@ -63,7 +63,7 @@ class AutoPulseApplication : Application() {
         instance = this
 
         try {
-            AutoPulseCrashHandler.install(this, executionLogRepository)
+            AutoPulseCrashHandler.install(this)
         } catch (t: Throwable) {
             android.util.Log.e("AutoPulseApp", "Could not install crash handler", t)
         }

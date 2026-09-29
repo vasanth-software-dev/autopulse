@@ -1,21 +1,21 @@
 package com.autopulse.automation.error
 
 import android.content.Context
+import android.content.Intent
 import android.util.Log
-import com.autopulse.automation.data.repository.ExecutionLogRepository
 import java.lang.Thread.UncaughtExceptionHandler
 
 class AutoPulseCrashHandler(
     private val context: Context,
-    private val logRepository: ExecutionLogRepository,
     private val defaultHandler: UncaughtExceptionHandler? = Thread.getDefaultUncaughtExceptionHandler()
 ) : UncaughtExceptionHandler {
 
     override fun uncaughtException(thread: Thread, throwable: Throwable) {
         Log.e("AutoPulseCrashHandler", "Uncaught exception in thread ${thread.name}", throwable)
 
+        val crashDetails = "${throwable.javaClass.name}: ${throwable.localizedMessage ?: "No message"}\n\n${throwable.stackTraceToString()}"
+
         // Persist crash details directly to SharedPreferences with synchronous commit()
-        // This ensures the diagnostic info is recorded before process termination
         try {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             prefs.edit()
@@ -27,7 +27,19 @@ class AutoPulseCrashHandler(
             Log.e("AutoPulseCrashHandler", "Failed to persist crash info to preferences", t)
         }
 
-        defaultHandler?.uncaughtException(thread, throwable)
+        // Launch CrashActivity to display diagnostic details and prevent silent auto-close
+        try {
+            val intent = Intent(context, CrashActivity::class.java).apply {
+                putExtra(CrashActivity.EXTRA_CRASH_INFO, crashDetails)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            }
+            context.startActivity(intent)
+            android.os.Process.killProcess(android.os.Process.myPid())
+            System.exit(10)
+        } catch (t: Throwable) {
+            Log.e("AutoPulseCrashHandler", "Failed to start CrashActivity", t)
+            defaultHandler?.uncaughtException(thread, throwable)
+        }
     }
 
     companion object {
@@ -36,11 +48,11 @@ class AutoPulseCrashHandler(
         const val KEY_STACKTRACE = "last_crash_stacktrace"
         const val KEY_TIMESTAMP = "last_crash_timestamp"
 
-        fun install(context: Context, logRepository: ExecutionLogRepository) {
+        fun install(context: Context) {
             val current = Thread.getDefaultUncaughtExceptionHandler()
             if (current !is AutoPulseCrashHandler) {
                 Thread.setDefaultUncaughtExceptionHandler(
-                    AutoPulseCrashHandler(context.applicationContext, logRepository, current)
+                    AutoPulseCrashHandler(context.applicationContext, current)
                 )
             }
         }
@@ -65,3 +77,4 @@ class AutoPulseCrashHandler(
         }
     }
 }
+
