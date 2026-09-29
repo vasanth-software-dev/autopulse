@@ -42,20 +42,46 @@ class ExecutionLogRepository(private val dao: ExecutionLogDao) {
         return id
     }
 
-    suspend fun logInfo(message: String, automationId: Long? = null, automationName: String? = null, taskId: String? = null) {
-        log(message, LogLevel.INFO, automationId, automationName, taskId)
+    suspend fun logInfo(
+        message: String,
+        automationId: Long? = null,
+        automationName: String? = null,
+        taskId: String? = null,
+        detailsJson: String? = null
+    ) {
+        log(message, LogLevel.INFO, automationId, automationName, taskId, detailsJson)
     }
 
-    suspend fun logSuccess(message: String, automationId: Long? = null, automationName: String? = null, taskId: String? = null) {
-        log(message, LogLevel.SUCCESS, automationId, automationName, taskId)
+    suspend fun logSuccess(
+        message: String,
+        automationId: Long? = null,
+        automationName: String? = null,
+        taskId: String? = null,
+        detailsJson: String? = null
+    ) {
+        log(message, LogLevel.SUCCESS, automationId, automationName, taskId, detailsJson)
     }
 
-    suspend fun logWarn(message: String, automationId: Long? = null, automationName: String? = null, taskId: String? = null) {
-        log(message, LogLevel.WARN, automationId, automationName, taskId)
+    suspend fun logWarn(
+        message: String,
+        automationId: Long? = null,
+        automationName: String? = null,
+        taskId: String? = null,
+        detailsJson: String? = null
+    ) {
+        log(message, LogLevel.WARN, automationId, automationName, taskId, detailsJson)
     }
 
-    suspend fun logError(message: String, automationId: Long? = null, automationName: String? = null, taskId: String? = null, details: String? = null) {
-        log(message, LogLevel.ERROR, automationId, automationName, taskId, details)
+    suspend fun logError(
+        message: String,
+        automationId: Long? = null,
+        automationName: String? = null,
+        taskId: String? = null,
+        details: String? = null,
+        detailsJson: String? = details
+    ) {
+        val finalDetails = detailsJson ?: details
+        log(message, LogLevel.ERROR, automationId, automationName, taskId, finalDetails)
     }
 
     suspend fun clearLogs() {
