@@ -1,12 +1,19 @@
 package com.autopulse.automation.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -36,16 +43,16 @@ fun TaskStatusBadge(status: TaskStatus, modifier: Modifier = Modifier) {
             .border(1.dp, textColor.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
             .padding(horizontal = 9.dp, vertical = 4.dp)
     ) {
-        androidx.compose.foundation.layout.Row(
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        Row(
+            verticalAlignment = Alignment.CenterVertically
         ) {
             if (status == TaskStatus.RUNNING) {
                 Box(
                     modifier = Modifier
                         .size(6.dp)
-                        .background(StatusRunning, androidx.compose.foundation.shape.CircleShape)
+                        .background(StatusRunning, CircleShape)
                 )
-                androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(6.dp))
             }
             Text(
                 text = status.name,
