@@ -8,8 +8,8 @@ object MockNotificationDispatcher {
 
     suspend fun dispatchMockOlxLead(
         logRepo: ExecutionLogRepository? = null,
-        title: String = "New Lead: iPhone 15 Pro Max 256GB",
-        text: String = "Hi! I am interested in your ad. Is this lead still available? Can you offer any discount?"
+        title: String = "You have new messages",
+        text: String = "Open olx to check for missed updates"
     ): NotificationEvent {
         val event = NotificationEvent(
             packageName = "com.olx.southasia",

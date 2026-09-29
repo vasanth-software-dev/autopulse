@@ -25,25 +25,25 @@ import org.json.JSONObject
 
 data class BuilderUiState(
     val automationId: Long = 0L,
-    val name: String = "OLX Lead Alert",
-    val description: String = "Repeats Telegram notification every 30s when a lead arrives until stopped.",
+    val name: String = "OLX Message Alert",
+    val description: String = "Repeats Telegram alert every 5s when a new message arrives until stopped.",
     val collisionStrategy: CollisionStrategy = CollisionStrategy.IGNORE,
 
     // Trigger
     val triggerType: TriggerType = TriggerType.NOTIFICATION_RECEIVED,
-    val selectedPackageName: String = "com.olx.southasia",
+    val selectedPackageName: String = "olx",
     val selectedAppName: String = "OLX",
     val matchType: MatchType = MatchType.CONTAINS,
 
     // Condition
-    val conditionType: ConditionType = ConditionType.TEXT_CONTAINS,
+    val conditionType: ConditionType = ConditionType.REGEX_MATCH,
     val conditionField: FieldToMatch = FieldToMatch.ANY,
-    val conditionValue: String = "lead",
+    val conditionValue: String = "new messages|missed updates",
     val isConditionNegated: Boolean = false,
     val isConditionCaseSensitive: Boolean = false,
 
     // Actions
-    val intervalSeconds: Long = 30L,
+    val intervalSeconds: Long = 5L,
     val repeatUntilStopped: Boolean = true,
     val messageTemplate: String = TelegramMessageFormatter.DEFAULT_LEAD_TEMPLATE_HTML,
 
@@ -58,6 +58,7 @@ class BuilderViewModel(application: Application) : AndroidViewModel(application)
 
     private val app = application as AutoPulseApplication
     private val automationRepo = app.automationRepository
+    private val taskRepo = app.repeatingTaskRepository
     private val logRepo = app.executionLogRepository
 
     private val _uiState = MutableStateFlow(BuilderUiState())
@@ -172,7 +173,7 @@ class BuilderViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun updateIntervalSeconds(seconds: Long) {
-        val safeSeconds = if (seconds <= 0L) 30L else seconds
+        val safeSeconds = seconds.coerceAtLeast(1L)
         _uiState.value = _uiState.value.copy(intervalSeconds = safeSeconds)
     }
 
@@ -251,8 +252,13 @@ class BuilderViewModel(application: Application) : AndroidViewModel(application)
 
             val savedId = automationRepo.saveAutomation(automation, listOf(trigger), conditions, actions)
 
+            // Immediately reflect updated interval on any currently running task for this automation
+            try {
+                taskRepo.updateRunningTaskIntervalForAutomation(savedId, state.intervalSeconds)
+            } catch (_: Exception) {}
+
             logRepo.logSuccess(
-                message = "Automation '${state.name}' saved successfully.",
+                message = "Automation '${state.name}' saved (Interval: ${state.intervalSeconds}s).",
                 automationId = savedId
             )
 

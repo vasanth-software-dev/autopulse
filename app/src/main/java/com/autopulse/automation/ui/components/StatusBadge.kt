@@ -32,16 +32,29 @@ fun TaskStatusBadge(status: TaskStatus, modifier: Modifier = Modifier) {
 
     Box(
         modifier = modifier
-            .background(bgColor, RoundedCornerShape(6.dp))
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .background(bgColor, RoundedCornerShape(8.dp))
+            .border(1.dp, textColor.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+            .padding(horizontal = 9.dp, vertical = 4.dp)
     ) {
-        Text(
-            text = status.name,
-            color = textColor,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.labelSmall
-        )
+        androidx.compose.foundation.layout.Row(
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        ) {
+            if (status == TaskStatus.RUNNING) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .background(StatusRunning, androidx.compose.foundation.shape.CircleShape)
+                )
+                androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(6.dp))
+            }
+            Text(
+                text = status.name,
+                color = textColor,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.labelSmall
+            )
+        }
     }
 }
 

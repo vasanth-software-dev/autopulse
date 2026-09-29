@@ -30,6 +30,10 @@ interface AutomationDao {
     suspend fun getEnabledAutomationsList(): List<AutomationWithRules>
 
     @Transaction
+    @Query("SELECT * FROM automations")
+    suspend fun getAllAutomationsList(): List<AutomationWithRules>
+
+    @Transaction
     @Query("SELECT * FROM automations WHERE id = :id")
     fun getAutomationWithRulesById(id: Long): Flow<AutomationWithRules?>
 

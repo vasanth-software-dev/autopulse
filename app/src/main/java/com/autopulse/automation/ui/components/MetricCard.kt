@@ -39,12 +39,20 @@ fun MetricCard(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(SurfaceDark)
-            .border(1.dp, BorderDark, RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color(0xFF131D31))
+            .border(1.dp, BorderDark, RoundedCornerShape(14.dp))
             .padding(14.dp)
     ) {
         Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.3f)
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(accentColor)
+            )
+            Spacer(modifier = Modifier.height(10.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,

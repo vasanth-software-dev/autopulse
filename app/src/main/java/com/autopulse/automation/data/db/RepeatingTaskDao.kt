@@ -58,6 +58,9 @@ interface RepeatingTaskDao {
     @Query("UPDATE repeating_tasks SET status = 'STOPPED' WHERE status = 'RUNNING'")
     suspend fun stopAllRunningTasks()
 
+    @Query("UPDATE repeating_tasks SET intervalSeconds = :intervalSeconds WHERE automationId = :automationId AND status = 'RUNNING'")
+    suspend fun updateRunningTaskIntervalForAutomation(automationId: Long, intervalSeconds: Long)
+
     @Delete
     suspend fun deleteTask(task: RepeatingTask)
 

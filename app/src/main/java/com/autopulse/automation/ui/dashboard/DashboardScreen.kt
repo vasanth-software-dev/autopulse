@@ -164,7 +164,7 @@ fun DashboardScreen(
             MetricCard(
                 title = "RUNNING TASKS",
                 value = "${uiState.runningTasks}",
-                subtitle = "30s repeaters",
+                subtitle = "Active repeaters",
                 icon = Icons.Default.PlayCircle,
                 accentColor = if (uiState.runningTasks > 0) AccentGreen else TextSecondaryDark,
                 modifier = Modifier
@@ -249,22 +249,60 @@ fun DashboardScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Diagnostic Simulate Button
-        OutlinedButton(
-            onClick = { viewModel.simulateOlxLead() },
-            shape = RoundedCornerShape(10.dp),
-            modifier = Modifier.fillMaxWidth()
+        // Simulator Station Card
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0xFF131D31))
+                .border(1.dp, BorderDark, RoundedCornerShape(12.dp))
+                .padding(14.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.BugReport,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-                tint = Color(0xFFFFB300)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Simulate Mock OLX Lead (Test Event)", fontWeight = FontWeight.SemiBold)
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .background(Color(0xFFFFB300).copy(alpha = 0.15f), RoundedCornerShape(6.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.BugReport,
+                            contentDescription = null,
+                            tint = Color(0xFFFFB300),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text("OLX Alert Simulator", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text("Simulate 'You have new messages' to test live repeaters", fontSize = 11.sp, color = TextSecondaryDark)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Button(
+                    onClick = { viewModel.simulateOlxLead() },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF233049)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayCircle,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = Color(0xFFFFB300)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Trigger Test OLX Alert", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = Color.White)
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))

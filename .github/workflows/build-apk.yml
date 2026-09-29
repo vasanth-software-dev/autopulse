@@ -80,38 +80,40 @@ jobs:
         run: |
           mkdir -p release-apk
           APK_FILE=$(find app/build/outputs/apk/ -name "*.apk" | head -n 1)
-          cp "$APK_FILE" release-apk/AutoPulse-v1.0.4.apk
+          cp "$APK_FILE" release-apk/AutoPulse-v1.0.5.apk
           ls -la release-apk/
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AutoPulse-v1.0.4-APK
-          path: release-apk/AutoPulse-v1.0.4.apk
+          name: AutoPulse-v1.0.5-APK
+          path: release-apk/AutoPulse-v1.0.5.apk
           retention-days: 30
 
       - name: Publish GitHub Release with Direct APK
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.4
-          name: AutoPulse v1.0.4 (Direct APK Download)
+          tag_name: v1.0.5
+          name: AutoPulse v1.0.5 (Direct APK Download)
           body: |
-            ### 📱 AutoPulse Android App v1.0.4
-            Download **AutoPulse-v1.0.4.apk** below directly to your phone.
+            ### 📱 AutoPulse Android App v1.0.5
+            Download **AutoPulse-v1.0.5.apk** below directly to your phone.
             
-            #### 🛠️ What's New & Added in v1.0.4:
-            - **Telegram Inline "STOP ALERT" Option**: Every alert message sent to Telegram now includes an inline `[🛑 STOP ALERT]` button. Tapping it instantly stops the repeating task on your phone without needing to open the app!
-            - **Telegram Bot Command Support**: Send `/stop` or `/stopall` to your bot in Telegram to cancel all active repeating alerts. Send `/status` to see currently active tasks.
-            - **Real-Time Telegram Long-Polling**: Integrated battery-friendly long-polling while tasks are active in the background service to immediately capture stop actions.
+            #### 🛠️ What's New & Upgraded in v1.0.5:
+            - **Dynamic Repeat Interval (e.g. 5s)**: Fixed interval updating so changing from 30s to 5s takes effect immediately, both on new triggers and already-running tasks.
+            - **Real OLX Notification Detection**: Built-in support matching actual OLX notifications (`"You have new messages"` / `"Open olx to check for missed updates"`) with automatic migration of existing rules.
+            - **Interactive Interval Stepper & Presets**: Easily pick `5s`, `10s`, `15s`, `30s`, or `60s`, or use `[-]` / `[+]` precision steppers with immediate visual confirmation.
+            - **Premium Obsidian UI/UX Upgrade**: High-contrast modern cards, live running pulse beacon indicators, tactile STOP alert buttons, refined typography, and quick OLX test simulator.
+            - **Telegram STOP Inline & Polling**: Retained full remote stop button and command functionality (`/stop`, `/stopall`).
             
             #### 🚀 Installation Instructions:
-            1. Download `AutoPulse-v1.0.4.apk` below.
+            1. Download `AutoPulse-v1.0.5.apk` below.
             2. Open the file on your phone.
             3. If prompted by Android or Play Protect:
                - Tap **"More details"** -> **"Install anyway"** (Standard for sideloaded developer apps).
             4. Grant the required permissions inside the app.
-          files: release-apk/AutoPulse-v1.0.4.apk
+          files: release-apk/AutoPulse-v1.0.5.apk
           draft: false
           prerelease: false
 

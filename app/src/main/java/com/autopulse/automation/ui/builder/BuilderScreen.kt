@@ -21,11 +21,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Send
@@ -38,6 +40,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -262,39 +265,131 @@ fun BuilderScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(SurfaceVariantDark, RoundedCornerShape(8.dp))
-                    .padding(12.dp)
+                    .background(SurfaceVariantDark, RoundedCornerShape(12.dp))
+                    .border(1.dp, BorderDark, RoundedCornerShape(12.dp))
+                    .padding(14.dp)
             ) {
                 Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Repeat, contentDescription = null, tint = Color(0xFFFFB300), modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Action 1: Start Repeating Task", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Interval (seconds):", fontSize = 13.sp)
-                        OutlinedTextField(
-                            value = uiState.intervalSeconds.toString(),
-                            onValueChange = { text ->
-                                val sec = text.filter { it.isDigit() }.toLongOrNull() ?: 30L
-                                viewModel.updateIntervalSeconds(sec)
-                            },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.width(100.dp),
-                            singleLine = true,
-                            shape = RoundedCornerShape(8.dp)
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Repeat, contentDescription = null, tint = Color(0xFFFFB300), modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Action 1: Start Repeating Alert", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+                        Box(
+                            modifier = Modifier
+                                .background(AccentGreen.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text("Until STOP", color = AccentGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
 
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text("Alert Repeat Frequency", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = TextSecondaryDark)
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text("Duration: Until I Press STOP", color = AccentGreen, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+
+                    // Stepper + Text display
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        IconButton(
+                            onClick = {
+                                val current = uiState.intervalSeconds
+                                val next = (current - 1).coerceAtLeast(1L)
+                                viewModel.updateIntervalSeconds(next)
+                            },
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(SurfaceDark, RoundedCornerShape(8.dp))
+                                .border(1.dp, BorderDark, RoundedCornerShape(8.dp))
+                        ) {
+                            Icon(Icons.Default.Remove, contentDescription = "Decrease interval", tint = Color.White)
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(46.dp)
+                                .background(SurfaceDark, RoundedCornerShape(8.dp))
+                                .border(1.dp, Primary.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "${uiState.intervalSeconds}",
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "seconds",
+                                    fontSize = 13.sp,
+                                    color = TextSecondaryDark
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = {
+                                val current = uiState.intervalSeconds
+                                viewModel.updateIntervalSeconds(current + 1)
+                            },
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(SurfaceDark, RoundedCornerShape(8.dp))
+                                .border(1.dp, BorderDark, RoundedCornerShape(8.dp))
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "Increase interval", tint = Color.White)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Quick Preset Chips (5s, 10s, 15s, 30s, 60s)
+                    Text("Quick Presets:", fontSize = 11.sp, color = TextSecondaryDark)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf(5L, 10L, 15L, 30L, 60L).forEach { sec ->
+                            val isSelected = uiState.intervalSeconds == sec
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(34.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) Primary else SurfaceDark)
+                                    .border(1.dp, if (isSelected) Primary else BorderDark, RoundedCornerShape(8.dp))
+                                    .clickable { viewModel.updateIntervalSeconds(sec) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "${sec}s",
+                                    fontSize = 12.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) Color.White else TextSecondaryDark
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "⚡ Real-time alerts repeat every ${uiState.intervalSeconds}s until you tap STOP in Telegram or the App.",
+                        color = Color(0xFFFFB300),
+                        fontSize = 11.sp
+                    )
                 }
             }
 

@@ -148,7 +148,6 @@ class AutomationExecutionService : Service() {
     }
 
     private suspend fun runRepeatingTaskLoop(taskId: String) {
-        val intervalMs = 30_000L // 30-second repeating cycle
         var isFirstExecution = true
 
         try {
@@ -164,11 +163,15 @@ class AutomationExecutionService : Service() {
                 executeTelegramTick(currentTask, isFirstExecution)
                 isFirstExecution = false
 
-                // 3. Double-check after network call before recording tick or scheduling delay
+                // 3. Re-query task to capture any live interval updates or status changes
                 val verifiedTask = taskRepo.getTaskByIdDirect(taskId)
                 if (verifiedTask == null || verifiedTask.status != TaskStatus.RUNNING) {
                     break
                 }
+
+                // Dynamically calculate interval in milliseconds from task configuration (minimum 1 second)
+                val intervalSec = verifiedTask.intervalSeconds.coerceAtLeast(1L)
+                val intervalMs = intervalSec * 1000L
 
                 val now = System.currentTimeMillis()
                 val nextExecution = now + intervalMs
@@ -184,7 +187,7 @@ class AutomationExecutionService : Service() {
                 // Schedule alarm fallback for deep Doze mode
                 scheduleAlarmWakeup(nextExecution)
 
-                // 4. Wait for 30 seconds before next notification
+                // 4. Wait for the configured interval before next notification
                 delay(intervalMs)
             }
         } catch (e: CancellationException) {
@@ -233,7 +236,7 @@ class AutomationExecutionService : Service() {
 
         when (result) {
             is TelegramResult.Success -> {
-                val tickLabel = if (isInitialTick) "Initial lead alert" else "30s repeat alert"
+                val tickLabel = if (isInitialTick) "Initial lead alert" else "${task.intervalSeconds}s repeat alert"
                 logRepo.logSuccess(
                     message = "Telegram message sent ($tickLabel) for '${task.automationName}'.",
                     automationId = task.automationId,

@@ -80,10 +80,10 @@ abstract class AutoPulseDatabase : RoomDatabase() {
                 val automationDao = db.automationDao()
                 val logDao = db.executionLogDao()
 
-                // Default Template: OLX Lead Alert
+                // Default Template: OLX Message Alert
                 val olxAutomation = Automation(
-                    name = "OLX Lead Alert",
-                    description = "Detects OLX buyer leads and repeats Telegram alerts every 30 seconds until stopped.",
+                    name = "OLX Message Alert",
+                    description = "Detects OLX buyer messages and repeats Telegram alerts every 5 seconds until stopped.",
                     isEnabled = true,
                     collisionStrategy = CollisionStrategy.IGNORE,
                     createdAt = System.currentTimeMillis(),
@@ -94,7 +94,7 @@ abstract class AutoPulseDatabase : RoomDatabase() {
                     Trigger(
                         automationId = 0,
                         type = TriggerType.NOTIFICATION_RECEIVED,
-                        packageName = "com.olx.southasia",
+                        packageName = "olx",
                         appName = "OLX",
                         matchType = MatchType.CONTAINS
                     )
@@ -103,9 +103,9 @@ abstract class AutoPulseDatabase : RoomDatabase() {
                 val conditions = listOf(
                     Condition(
                         automationId = 0,
-                        type = ConditionType.TEXT_CONTAINS,
+                        type = ConditionType.REGEX_MATCH,
                         fieldToMatch = FieldToMatch.ANY,
-                        value = "lead",
+                        value = "new messages|missed updates|lead",
                         isNegated = false,
                         isCaseSensitive = false
                     )
@@ -116,13 +116,13 @@ abstract class AutoPulseDatabase : RoomDatabase() {
                         automationId = 0,
                         orderIndex = 0,
                         type = ActionType.START_REPEAT,
-                        payloadJson = """{"intervalSeconds":30,"untilStopped":true}"""
+                        payloadJson = """{"intervalSeconds":5,"untilStopped":true}"""
                     ),
                     Action(
                         automationId = 0,
                         orderIndex = 1,
                         type = ActionType.SEND_TELEGRAM,
-                        payloadJson = """{"messageTemplate":"🔥 NEW OLX LEAD\n\nApp: {{app_name}}\nTitle: {{notification_title}}\nMessage: {{notification_text}}\nTime: {{timestamp}}"}"""
+                        payloadJson = """{"messageTemplate":"🔥 NEW OLX MESSAGE\n\nApp: {{app_name}}\nTitle: {{notification_title}}\nMessage: {{notification_text}}\nTime: {{timestamp}}"}"""
                     )
                 )
 

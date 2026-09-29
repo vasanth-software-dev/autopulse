@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.autopulse.automation.data.model.ActionType
 import com.autopulse.automation.data.model.AutomationWithRules
 import com.autopulse.automation.ui.theme.AccentGreen
 import com.autopulse.automation.ui.theme.AlertRed
@@ -41,6 +42,7 @@ import com.autopulse.automation.ui.theme.BorderDark
 import com.autopulse.automation.ui.theme.Primary
 import com.autopulse.automation.ui.theme.SurfaceDark
 import com.autopulse.automation.ui.theme.TextSecondaryDark
+import org.json.JSONObject
 
 @Composable
 fun AutomationCard(
@@ -58,9 +60,9 @@ fun AutomationCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(SurfaceDark)
-            .border(1.dp, BorderDark, RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color(0xFF131D31))
+            .border(1.dp, BorderDark, RoundedCornerShape(14.dp))
             .clickable { onEdit() }
             .padding(16.dp)
     ) {
@@ -124,8 +126,21 @@ fun AutomationCard(
                     )
                 }
 
-                // Action count
-                if (actions.isNotEmpty()) {
+                // Action count & repeat interval
+                val repeatAction = actions.firstOrNull { it.type == ActionType.START_REPEAT }
+                val repeatSec = repeatAction?.let {
+                    try {
+                        JSONObject(it.payloadJson).optLong("intervalSeconds", 5L)
+                    } catch (_: Exception) { 5L }
+                }
+
+                if (repeatSec != null) {
+                    SummaryPill(
+                        icon = Icons.Default.Repeat,
+                        label = "Repeat ${repeatSec}s",
+                        tint = Color(0xFFFFB300)
+                    )
+                } else if (actions.isNotEmpty()) {
                     SummaryPill(
                         icon = Icons.Default.Repeat,
                         label = "${actions.size} Actions",

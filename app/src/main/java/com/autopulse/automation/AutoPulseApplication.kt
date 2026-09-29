@@ -91,8 +91,53 @@ class AutoPulseApplication : Application() {
                             AutomationExecutionService.startTask(this@AutoPulseApplication, task.id)
                         }
                     }
+
+                    // Auto-migrate legacy OLX rules to match real OLX notifications (new messages / missed updates)
+                    val allAutomations = automationRepository.getAllAutomationsList()
+                    for (rule in allAutomations) {
+                        val auto = rule.automation
+                        val trigger = rule.triggers.firstOrNull()
+                        val conditions = rule.conditions
+                        val isOlxRule = auto.name.contains("OLX", ignoreCase = true) ||
+                                (trigger?.packageName?.contains("olx", ignoreCase = true) == true)
+
+                        if (isOlxRule) {
+                            var needsUpdate = false
+                            val updatedConditions = conditions.map { cond ->
+                                if (cond.value.equals("lead", ignoreCase = true)) {
+                                    needsUpdate = true
+                                    cond.copy(
+                                        type = com.autopulse.automation.data.model.ConditionType.REGEX_MATCH,
+                                        fieldToMatch = com.autopulse.automation.data.model.FieldToMatch.ANY,
+                                        value = "new messages|missed updates|lead"
+                                    )
+                                } else {
+                                    cond
+                                }
+                            }
+
+                            val updatedTriggers = rule.triggers.map { trg ->
+                                if (trg.packageName == "com.olx.southasia" && trg.matchType != com.autopulse.automation.data.model.MatchType.CONTAINS) {
+                                    needsUpdate = true
+                                    trg.copy(packageName = "olx", matchType = com.autopulse.automation.data.model.MatchType.CONTAINS)
+                                } else {
+                                    trg
+                                }
+                            }
+
+                            if (needsUpdate) {
+                                automationRepository.saveAutomation(
+                                    auto,
+                                    updatedTriggers,
+                                    updatedConditions,
+                                    rule.actions
+                                )
+                                executionLogRepository.logInfo("Upgraded '${auto.name}' condition to match real OLX message notifications.")
+                            }
+                        }
+                    }
                 } catch (t: Throwable) {
-                    android.util.Log.e("AutoPulseApp", "Error recovering running tasks", t)
+                    android.util.Log.e("AutoPulseApp", "Error during app startup recovery or rule migration", t)
                 }
             }
         } catch (t: Throwable) {

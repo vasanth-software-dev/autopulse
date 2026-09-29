@@ -71,7 +71,7 @@ fun TasksScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "When an automation fires with a repeating action, its live execution will appear here with a 30s interval countdown and a STOP button.",
+                    text = "When an automation fires with a repeating action, its live execution will appear here with its repeating interval countdown and a quick STOP button.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondaryDark,
                     textAlign = TextAlign.Center

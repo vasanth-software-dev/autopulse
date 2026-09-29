@@ -52,12 +52,12 @@ fun TaskCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(SurfaceDark)
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color(0xFF131D31))
             .border(
                 width = 1.dp,
                 color = if (task.status == TaskStatus.RUNNING) Primary.copy(alpha = 0.5f) else BorderDark,
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(14.dp)
             )
             .padding(16.dp)
     ) {
@@ -74,11 +74,37 @@ fun TaskCard(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Text(
-                        text = "Interval: Every ${task.intervalSeconds}s • Executions: ${task.executionCount}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondaryDark
-                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .background(Primary.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
+                                .border(1.dp, Primary.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 7.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "Every ${task.intervalSeconds}s",
+                                color = Primary,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .background(Color(0xFF233049), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 7.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "${task.executionCount} alert(s)",
+                                color = TextSecondaryDark,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
                 }
 
                 TaskStatusBadge(status = task.status)
@@ -89,19 +115,21 @@ fun TaskCard(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color(0xFF0F141C), RoundedCornerShape(8.dp))
-                        .padding(10.dp)
+                        .background(Color(0xFF0D121F), RoundedCornerShape(10.dp))
+                        .border(1.dp, BorderDark.copy(alpha = 0.6f), RoundedCornerShape(10.dp))
+                        .padding(12.dp)
                 ) {
                     Column {
                         if (task.leadTitle.isNotBlank()) {
                             Text(
-                                text = "Lead: ${task.leadTitle}",
+                                text = task.leadTitle,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                         }
                         if (task.leadText.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = task.leadText,
                                 fontSize = 12.sp,
@@ -125,7 +153,7 @@ fun TaskCard(
                         timeFormat.format(Date(task.lastExecutionTimestamp))
                     } else "None yet"
                     Text(
-                        text = "Last: $lastRunStr",
+                        text = "Last alert: $lastRunStr",
                         style = MaterialTheme.typography.labelSmall,
                         color = TextSecondaryDark
                     )
@@ -138,7 +166,8 @@ fun TaskCard(
                             containerColor = AlertRed,
                             contentColor = Color.White
                         ),
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.height(42.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.StopCircle,
@@ -147,8 +176,9 @@ fun TaskCard(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "STOP",
-                            fontWeight = FontWeight.Bold
+                            text = "STOP ALERT",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
                         )
                     }
                 }

@@ -32,6 +32,10 @@ class RepeatingTaskRepository(private val dao: RepeatingTaskDao) {
         dao.stopAllRunningTasks()
     }
 
+    suspend fun updateRunningTaskIntervalForAutomation(automationId: Long, intervalSeconds: Long) {
+        dao.updateRunningTaskIntervalForAutomation(automationId, intervalSeconds)
+    }
+
     suspend fun recordTick(taskId: String, lastExecution: Long, nextExecution: Long) {
         dao.recordExecutionTick(taskId, lastExecution, nextExecution)
     }

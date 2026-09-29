@@ -20,6 +20,7 @@ class AutomationRepository(private val dao: AutomationDao) {
     suspend fun getAutomationByIdDirect(id: Long): AutomationWithRules? = dao.getAutomationWithRulesByIdDirect(id)
 
     suspend fun getEnabledAutomationsList(): List<AutomationWithRules> = dao.getEnabledAutomationsList()
+    suspend fun getAllAutomationsList(): List<AutomationWithRules> = dao.getAllAutomationsList()
 
     suspend fun setEnabled(id: Long, isEnabled: Boolean) {
         dao.setEnabled(id, isEnabled)
