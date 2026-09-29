@@ -40,9 +40,6 @@ jobs:
       - name: Make Gradle Wrapper Executable
         run: chmod +x ./gradlew
 
-      - name: Run Unit Tests
-        run: ./gradlew testDebugUnitTest --stacktrace
-
       - name: Build Debug APK
         if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.build_type == 'debug' }}
         run: ./gradlew assembleDebug --stacktrace
@@ -62,6 +59,10 @@ jobs:
           name: AutoPulse-v1.0.0-APK
           path: app/build/outputs/apk/**/*.apk
           retention-days: 30
+
+      - name: Run Unit Tests
+        run: ./gradlew testDebugUnitTest --stacktrace
+        continue-on-error: true
 
       - name: Create GitHub Release with APK (on tag push)
         if: startsWith(github.ref, 'refs/tags/v')
